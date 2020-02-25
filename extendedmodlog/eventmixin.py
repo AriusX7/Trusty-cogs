@@ -2,6 +2,7 @@ import datetime
 import discord
 import asyncio
 import logging
+import os
 
 from discord.ext.commands.converter import Converter
 from discord.ext.commands.errors import BadArgument
@@ -163,6 +164,41 @@ class EventMixin:
             except RuntimeError:
                 raise RuntimeError("No Modlog set")
         return channel
+
+    def set_text(
+        self, message: discord.Message, embed: discord.Embed, iden: str
+    ):
+        """Set text into field. Break into multiple fields if necessary."""
+
+        content = message.content
+
+        if len(content) > 1024:
+            first = content[:500]
+            # second = content[1024:]
+            fn = f"{iden.lower()}.txt"
+            f = open(fn, "w")
+            f.write(content)
+
+            file = discord.File(fn)
+
+            txt = f"{first.strip()}...\n\nFull message attached below."
+
+            f.close()
+
+            try:
+                os.remove(fn)
+            except OSError:
+                open(fn, "w").close()
+
+            embed.add_field(name=f"{iden} Content", value=txt)
+            # embed.add_field(
+            #     name=f"{iden} Content 2", value=second, inline=False
+            # )
+        else:
+            file = None
+            embed.add_field(name=f"{iden} Content", value=content)
+
+        return embed, file
 
     @commands.Cog.listener()
     async def on_command(self, ctx: commands.Context) -> None:
@@ -381,7 +417,7 @@ class EventMixin:
                 embed.add_field(name=_("Attachments"), value=files)
             embed.set_footer(text=_("User ID: ") + str(message.author.id))
             embed.set_author(
-                name=_("{member} ({m_id})- Deleted Message").format(member=author, m_id=author.id),
+                name=_("{member} ({m_id}) - Deleted Message").format(member=author, m_id=author.id),
                 icon_url=str(message.author.avatar_url),
             )
             await channel.send(embed=embed)
@@ -1217,14 +1253,16 @@ class EventMixin:
         if embed_links:
             name = before.author
             embed = discord.Embed(
-                description=before.content,
+                description=(
+                    f"[Click here to jump to the message.]({after.jump_url})"
+                ),
                 colour=await self.get_event_colour(guild, "message_edit"),
                 timestamp=before.created_at,
             )
-            jump_url = f"[Click to see new message]({after.jump_url})"
-            embed.add_field(name=_("After Message:"), value=jump_url)
-            embed.add_field(name=_("Channel:"), value=before.channel.mention)
-            embed.set_footer(text=_("User ID: ") + str(before.author.id))
+            embed, bfile = self.set_text(before, embed, "Before")
+            embed, afile = self.set_text(after, embed, "After")
+            embed.add_field(name=_("Channel"), value=before.channel.mention)
+            embed.set_footer(text=_("Message ID: ") + str(before.id))
             embed.set_author(
                 name=_("{member} ({m_id}) - Edited Message").format(
                     member=before.author, m_id=before.author.id
@@ -1232,6 +1270,10 @@ class EventMixin:
                 icon_url=str(before.author.avatar_url),
             )
             await channel.send(embed=embed)
+            if bfile:
+                await channel.send(file=bfile)
+            if afile:
+                await channel.send(file=afile)
         else:
             msg = _(
                 "{emoji} `{time}` **{author}** (`{a_id}`) edited a message "
