@@ -902,7 +902,7 @@ class EventMixin:
         embed = discord.Embed(
             description=after.mention,
             timestamp=time,
-            colour=await self.get_event_colour(guild, "channel_update"),
+            colour=await self.get_event_colour(guild, "channel_change"),
         )
         embed.set_author(
             name=_("{chan_type} Channel Updated: {chan_name} ({chan_id})").format(
@@ -1065,7 +1065,7 @@ class EventMixin:
         time = datetime.datetime.utcnow()
         embed = discord.Embed(
             description=after.mention,
-            colour=await self.get_event_colour(guild, "role_updated"),
+            colour=await self.get_event_colour(guild, "role_change"),
             timestamp=time
         )
         msg = _("{emoji} `{time}` Updated role **{role}**\n").format(
