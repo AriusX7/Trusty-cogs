@@ -1077,7 +1077,7 @@ class EventMixin:
             embed.set_author(name=_("Updated @everyone role "))
         else:
             embed.set_author(
-                name=_("Updated {role} ({r_id}) role ").format(role=before.name, r_id=before.id)
+                name=_("Updated Role: {role} ({r_id})").format(role=before.name, r_id=before.id)
             )
         if perp:
             msg += _("Updated by ") + str(perp) + "\n"
