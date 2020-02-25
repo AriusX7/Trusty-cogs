@@ -608,7 +608,7 @@ class EventMixin:
             embed.add_field(name=_("Account created on:"), value=created_on)
             embed.set_footer(text=_("User ID: ") + str(member.id))
             embed.set_author(
-                name=_("{member} ({m_id}) has joined the guild").format(
+                name=_("{member} ({m_id}) has joined the guild!").format(
                     member=member, m_id=member.id
                 ),
                 url=member.avatar_url,
@@ -674,7 +674,7 @@ class EventMixin:
                 embed.add_field(name=_("Reason"), value=str(reason))
             embed.set_footer(text=_("User ID: ") + str(member.id))
             embed.set_author(
-                name=_("{member} ({m_id}) has left the guild").format(
+                name=_("{member} ({m_id}) has left the guild!").format(
                     member=member, m_id=member.id
                 ),
                 url=member.avatar_url,
@@ -777,7 +777,7 @@ class EventMixin:
             colour=await self.get_event_colour(guild, "channel_create"),
         )
         embed.set_author(
-            name=_("{chan_type} Channel Created {chan_name} ({chan_id})").format(
+            name=_("{chan_type} Channel Created: {chan_name} ({chan_id})").format(
                 chan_type=channel_type, chan_name=new_channel.name, chan_id=new_channel.id
             )
         )
@@ -842,7 +842,7 @@ class EventMixin:
             colour=await self.get_event_colour(guild, "channel_delete"),
         )
         embed.set_author(
-            name=_("{chan_type} Channel Deleted {chan_name} ({chan_id})").format(
+            name=_("{chan_type} Channel Deleted: {chan_name} ({chan_id})").format(
                 chan_type=channel_type, chan_name=old_channel.name, chan_id=old_channel.id
             )
         )
@@ -902,10 +902,10 @@ class EventMixin:
         embed = discord.Embed(
             description=after.mention,
             timestamp=time,
-            colour=await self.get_event_colour(guild, "channel_create"),
+            colour=await self.get_event_colour(guild, "channel_update"),
         )
         embed.set_author(
-            name=_("{chan_type} Channel Updated {chan_name} ({chan_id})").format(
+            name=_("{chan_type} Channel Updated: {chan_name} ({chan_id})").format(
                 chan_type=channel_type, chan_name=before.name, chan_id=before.id
             )
         )
@@ -1063,7 +1063,11 @@ class EventMixin:
             and self.settings[guild.id]["role_change"]["embed"]
         )
         time = datetime.datetime.utcnow()
-        embed = discord.Embed(description=after.mention, colour=after.colour, timestamp=time)
+        embed = discord.Embed(
+            description=after.mention,
+            colour=await self.get_event_colour(guild, "role_updated"),
+            timestamp=time
+        )
         msg = _("{emoji} `{time}` Updated role **{role}**\n").format(
             emoji=self.settings[guild.id]["role_change"]["emoji"],
             time=time.strftime("%H:%M:%S"),
@@ -1149,7 +1153,7 @@ class EventMixin:
             timestamp=time,
         )
         embed.set_author(
-            name=_("Role created {role} ({r_id})").format(role=role.name, r_id=role.id)
+            name=_("Role Created: {role} ({r_id})").format(role=role.name, r_id=role.id)
         )
         msg = _("{emoji} `{time}` Role created {role}\n").format(
             emoji=self.settings[guild.id]["role_create"]["emoji"],
@@ -1203,7 +1207,7 @@ class EventMixin:
             colour=await self.get_event_colour(guild, "role_delete"),
         )
         embed.set_author(
-            name=_("Role deleted {role} ({r_id})").format(role=role.name, r_id=role.id)
+            name=_("Role Deleted: {role} ({r_id})").format(role=role.name, r_id=role.id)
         )
         msg = _("{emoji} `{time}` Role deleted **{role}**\n").format(
             emoji=self.settings[guild.id]["role_create"]["emoji"],
@@ -1325,7 +1329,7 @@ class EventMixin:
             "icon_url": _("Server Icon:"),
             "owner": _("Server Owner:"),
             "splash": _("Splash Image:"),
-            "system_channel": _("Welcome message channel:"),
+            "system_channel": _("Welcome Message Channel:"),
             "verification_level": _("Verification Level:"),
         }
         worth_updating = False
