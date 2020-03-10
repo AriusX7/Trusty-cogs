@@ -10,7 +10,7 @@ from discord.ext.commands.errors import BadArgument
 from redbot.core.bot import Red
 from redbot.core import commands, Config, modlog
 from redbot.core.i18n import Translator, cog_i18n
-from redbot.core.utils.chat_formatting import humanize_list, inline, escape
+from redbot.core.utils.chat_formatting import humanize_list, inline, escape, text_to_file
 
 from typing import Union, cast, Sequence
 
@@ -409,7 +409,7 @@ class EventMixin:
 
             embed.add_field(name=_("Channel"), value=message_channel.mention)
             if perp:
-                embed.add_field(name=_("Deleted by"), value=perp)
+                embed.add_field(name=_("Deleted By"), value=perp)
             if message.attachments:
                 files = ", ".join(a.filename for a in message.attachments)
                 if len(message.attachments) > 1:
@@ -451,16 +451,55 @@ class EventMixin:
             channel.permissions_for(guild.me).embed_links
             and self.settings[guild.id]["message_delete"]["embed"]
         )
+
+        perp = None
+        messages_info = ""
+        for num, message in enumerate(payload.cached_messages, start=1):
+            if not perp:
+                if channel.permissions_for(guild.me).view_audit_log:
+                    action = discord.AuditLogAction.message_delete
+                    async for log in guild.audit_logs(limit=2, action=action):
+                        same_chan = log.extra.channel.id == channel.id
+                        if log.target.id == message.author.id and same_chan:
+                            perp = f"{log.user}({log.user.id})"
+                            break
+
+            messages_info += _(
+                "\n\nMessage #{num}"
+                "\n\nAuthor: {author_name} ({author_id})"
+                "\nTimestamp: {timestamp}"
+                "\n\nContent:\n\n{content}"
+                "\n\n----------------------------------------------"
+            ).format(
+                num=num,
+                author_name=message.author,
+                author_id=message.author.id,
+                timestamp=message.created_at.strftime("%d %b %Y %H:%M"),
+                content=message.content
+            )
+
+        messages_info += _(
+            "\n\nAction By: {user}"
+            "\nChannel: {channel_name} ({channel_id})"
+        ).format(
+            user=perp or "Cannot determine",
+            channel_name=channel,
+            channel_id=channel.id
+        )
+
+        file = text_to_file(messages_info.strip(), 'bulkdelete.txt')
+
         message_amount = len(payload.message_ids)
         if embed_links:
             embed = discord.Embed(
                 description=message_channel.mention,
                 colour=await self.get_event_colour(guild, "message_delete"),
             )
-            embed.set_author(name=_("Bulk message delete"), icon_url=guild.icon_url)
+            embed.set_author(name=_("Bulk Message Delete"), icon_url=guild.icon_url)
             embed.add_field(name=_("Channel"), value=message_channel.mention)
-            embed.add_field(name=_("Messages deleted"), value=str(message_amount))
+            embed.add_field(name=_("Messages Deleted"), value=str(message_amount))
             await channel.send(embed=embed)
+            await channel.send(file=file)
         else:
             infomessage = _(
                 "{emoji} `{time}` Bulk message delete in {channel}, {amount} messages deleted."
@@ -470,7 +509,10 @@ class EventMixin:
                 amount=message_amount,
                 channel=message_channel.mention,
             )
-            await channel.send(infomessage)
+            try:
+                await channel.send(infomessage, file=file)
+            except discord.Forbidden:
+                await channel.send(infomessage)
         if settings["bulk_individual"]:
             for message in payload.cached_messages:
                 new_payload = discord.RawMessageDeleteEvent(
